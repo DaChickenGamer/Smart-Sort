@@ -21,3 +21,14 @@ def detect_os():
 if __name__ == "__main__":
     os_name = detect_os()
     print(f"Detected Operating System: {os_name}")
+
+
+    #from os_detection import detect_os
+
+# current_os = detect_os()
+#if current_os == "MacOS":
+    # Execute Mac-specific file operations
+ #   pass
+#elif current_os == "Windows":
+    # Execute Windows-specific file operations
+ #   pass
