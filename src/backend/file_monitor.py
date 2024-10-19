@@ -1,3 +1,4 @@
+import os
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -6,6 +7,9 @@ from backend.file_categorizer import categorize_file
 
 class FileHandler(FileSystemEventHandler):
     def on_created(self, event):
+        # gets the username
+        user_name = os.getlogin()
+
         # When a new file is created, categorize and move it
         file_path = event.src_path
         print(f"New file detected: {file_path}")
@@ -15,13 +19,13 @@ class FileHandler(FileSystemEventHandler):
         
         # Define the destination folder based on the category
         if category == "Documents":
-            dest_folder = "/Users/gagankarnati/Documents" #"/path/to/Documents"
+            dest_folder = "/Users/" + user_name + "/Documents" #"/path/to/Documents"
         elif category == "Media":
-            dest_folder = "/Users/gagankarnati/Media" #"/path/to/Media"
+            dest_folder = "/Users/" + user_name + "/Media" #"/path/to/Media"
         elif category == "Images":
-            dest_folder = "/Users/gagankarnati/Images" #"/path/to/Images"
+            dest_folder = "/Users/" + user_name + "/Images" #"/path/to/Images"
         else:
-            dest_folder = "/Users/gagankarnati/Others" #"/path/to/Others"
+            dest_folder = "/Users/" + user_name + "/Others" #"/path/to/Others"
         
         # Move the file
         move_file(file_path, dest_folder)

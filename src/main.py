@@ -11,8 +11,11 @@ if __name__ == "__main__":
     os_type = detect_os()
     print(f"Operating System Detected: {os_type}")
 
+    # gets the username
+    username = os.getlogin()
+
     # Specify the folder you want to monitor (Downloads folder)
-    folder_to_monitor = "/Users/gagankarnati/Downloads"  # Adjust for your OS
+    folder_to_monitor = "/Users/" + username +"/Downloads"  # Adjust for your OS
     
     print(f"Monitoring folder: {folder_to_monitor}")
     start_monitoring(folder_to_monitor)
