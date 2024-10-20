@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.backend.file_search import search_files
+from src.io.manual_organization_script import Organize
 
 
 class CustomFileSystemModel(QFileSystemModel):
@@ -25,7 +26,7 @@ class CustomFileSystemModel(QFileSystemModel):
                 elif file_path.endswith(('.jpg', '.png', '.gif')):
                     return self.color_icon(qta.icon('fa.image'), 'orange')
                 elif file_path.endswith(('.mp4', '.mkv')):
-                    return self.color_icon(qta.icon('fa.file-video'), 'red')
+                    return self.color_icon(qta.icon('fa.video-camera'), 'red')
                 else:
                     return self.color_icon(qta.icon('fa.file'), 'gray')
         return super().data(index, role)
@@ -143,6 +144,16 @@ class FileExplorer(QMainWindow):
         button_layout.addWidget(self.search_bar)
         button_layout.addWidget(self.show_hidden_button)
 
+        # Create Organize button
+        self.organize_button = QPushButton("Organize Current Folder")
+        self.organize_button.clicked.connect(self.organize_folder)
+
+        # Add the organize button to the button layout
+        button_layout.addWidget(self.organize_button)
+
+        self.organize_button = QPushButton("Organize Current Folder")
+        self.organize_button.clicked.connect(self.organize_folder)
+
         # List View for files
         self.list_view = QListView()
         self.list_view.setMinimumWidth(int(windowMinimumWidth / 7) * 5)
@@ -196,6 +207,15 @@ class FileExplorer(QMainWindow):
 
         # Connect the double-click signal to open files or directories
         self.list_view.doubleClicked.connect(self.open_item)
+    def organize_folder(self):
+        current_index = self.list_view.rootIndex()
+        if current_index.isValid():
+            folder_path = self.model.filePath(current_index)
+            try:
+                Organize(folder_path)
+                self.model.refresh(current_index)  # Refresh the model to show updated organization
+            except Exception as e:
+                print(f"Error organizing folder: {e}")
 
     def context_menu(self, position):
         index = self.list_view.indexAt(position)
@@ -203,15 +223,6 @@ class FileExplorer(QMainWindow):
             menu = QtWidgets.QMenu(self)
             rename_action = menu.addAction("Rename")
             action = menu.exec_(self.list_view.viewport().mapToGlobal(position))  # Position it at the cursor
-            if action == rename_action:
-                self.rename_file(index)
-
-    def context_menu(self, position):
-        index = self.list_view.indexAt(position)
-        if index.isValid():
-            menu = QtWidgets.QMenu(self)
-            rename_action = menu.addAction("Rename")
-            action = menu.exec_(self.list_view.viewport().mapToGlobal(position))  # Correct positioning
             if action == rename_action:
                 self.rename_file(index)
 
