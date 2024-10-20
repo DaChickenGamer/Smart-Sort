@@ -1,7 +1,7 @@
 import sys
 import os
 from PySide6 import QtGui, QtWidgets
-from PySide6.QtCore import QSize, Qt, QDir
+from PySide6.QtCore import QSize, Qt, QDir, QTimer
 import qtawesome as qta
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import (
@@ -190,6 +190,105 @@ class FileExplorer(QMainWindow):
         # Connect search bar's returnPressed signal to filter_files
         self.search_bar.returnPressed.connect(self.filter_files)
 
+        # Enable the context menu on the list view
+        self.list_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_view.customContextMenuRequested.connect(self.context_menu)
+
+        # Connect the double-click signal to open files or directories
+        self.list_view.doubleClicked.connect(self.open_item)
+
+    def context_menu(self, position):
+        index = self.list_view.indexAt(position)
+        if index.isValid():
+            menu = QtWidgets.QMenu(self)
+            rename_action = menu.addAction("Rename")
+            action = menu.exec_(self.list_view.viewport().mapToGlobal(position))  # Position it at the cursor
+            if action == rename_action:
+                self.rename_file(index)
+
+    def context_menu(self, position):
+        index = self.list_view.indexAt(position)
+        if index.isValid():
+            menu = QtWidgets.QMenu(self)
+            rename_action = menu.addAction("Rename")
+            action = menu.exec_(self.list_view.viewport().mapToGlobal(position))  # Correct positioning
+            if action == rename_action:
+                self.rename_file(index)
+
+    def open_item(self, index):
+        if index.isValid():
+            # Only open on double-click
+            QTimer.singleShot(250, lambda: self.check_for_double_click(index))
+
+    def check_for_double_click(self, index):
+        if index == self.list_view.currentIndex():
+            path = self.model.filePath(index)
+            if self.model.isDir(index):
+                self.list_view.setRootIndex(self.model.index(path))
+                self.dir_stack.append(path)
+                self.back_button.setEnabled(True)
+            else:
+                self.open_file(path)
+
+    def rename_file(self, index):
+        if not index.isValid():
+            return
+
+        file_path = self.model.filePath(index)
+        self.rename_edit = QLineEdit(self)
+        self.rename_edit.setText(os.path.basename(file_path))
+
+        self.rename_edit.setStyleSheet("background-color: rgba(173, 216, 230, 0.7); color: black; font-size: 16px;")
+
+        self.rename_edit.setToolTip(file_path)
+
+        # Calculate width based on text length
+        text_width = self.rename_edit.fontMetrics().width(self.rename_edit.text())
+        min_width = 100  # Minimum width
+        max_width = 400  # Maximum width
+        self.rename_edit.setFixedWidth(max(min_width, min(max_width, text_width + 20)))  # Add some padding
+
+        # Get the item's rect in the list view
+        rect = self.list_view.visualRect(index)
+
+        # Map the item rect position to global coordinates
+        global_pos = self.list_view.viewport().mapToGlobal(rect.topLeft())
+
+        # Set the geometry of QLineEdit
+        self.rename_edit.setGeometry(global_pos.x(), global_pos.y(), self.rename_edit.width(), rect.height())
+        self.rename_edit.show()
+        self.rename_edit.selectAll()
+        self.rename_edit.setFocus()
+
+        # Connect signals to handle commit or cancel
+        self.rename_edit.returnPressed.connect(lambda: self.commit_rename(file_path, index))
+        self.rename_edit.editingFinished.connect(self.rename_edit.hide)
+
+    def commit_rename(self, old_path, index):
+        new_name = self.rename_edit.text()
+        new_path = os.path.join(os.path.dirname(old_path), new_name)
+
+        try:
+            os.rename(old_path, new_path)  # Rename the file
+            self.model.refresh(index.parent())  # Refresh the model to reflect changes
+        except Exception as e:
+            print(f"Error renaming file: {e}")
+        finally:
+            self.rename_edit.hide()  # Hide the QLineEdit after renaming
+
+    def commit_data(self, editor):
+        index = self.list_view.currentIndex()
+        if index.isValid():
+            new_name = editor.text()
+            old_path = self.model.filePath(index)
+            new_path = os.path.join(os.path.dirname(old_path), new_name)
+
+            try:
+                os.rename(old_path, new_path)  # Rename the file
+                self.model.refresh(index.parent())  # Refresh the model to reflect changes
+            except Exception as e:
+                print(f"Error renaming file: {e}")
+
     def create_file(self):
         current_index = self.list_view.rootIndex()
         if current_index.isValid():
@@ -208,19 +307,27 @@ class FileExplorer(QMainWindow):
             self.back_button.setEnabled(True)  # Enable back button
 
     def on_list_view_clicked(self, index):
-        if self.list_view.model() == self.search_results_model:
-            # If the search results model is active
-            path = index.data()  # Get the full path from the item's data
-            print(f"File selected: {path}")
-        else:
-            # Handle the original model as before
+        if index.isValid():
             path = self.model.filePath(index)
             if self.model.isDir(index):
+                # If it's a directory, change the view to that directory
                 self.list_view.setRootIndex(self.model.index(path))
                 self.dir_stack.append(path)
                 self.back_button.setEnabled(True)
             else:
-                print(f"File selected: {path}")
+                # If it's a file and already selected, open it
+                if self.list_view.currentIndex() == index:
+                    self.open_file(path)
+                else:
+                    # Update current index without opening
+                    self.list_view.setCurrentIndex(index)
+
+    def open_file(self, path):
+        import subprocess
+        if sys.platform == "darwin":
+            subprocess.call(["open", path])
+        else:
+            os.startfile(path)
 
     def go_back(self):
         if len(self.dir_stack) > 1:
