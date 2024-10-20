@@ -102,7 +102,7 @@ class FileExplorer(QMainWindow):
 
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
-        layout = QHBoxLayout(self.central_widget)
+        layout = QVBoxLayout(self.central_widget)
         self.setMinimumHeight(500)
 
         windowMinimumWidth = 900
@@ -128,26 +128,12 @@ class FileExplorer(QMainWindow):
         self.tree_view.setColumnHidden(2, True)
         self.tree_view.setColumnHidden(3, True)
 
-        # List View for files with button on top right
-        self.list_view_widget = QWidget()
-        list_layout = QVBoxLayout(self.list_view_widget)
-
         # Back button with Font Awesome icon
         self.back_button = QPushButton()
         self.back_button.setIcon(qta.icon('fa.arrow-left'))  # Use Font Awesome left arrow icon
         self.back_button.setToolTip("Go back")
         self.back_button.setEnabled(False)  # Initially disabled
         self.back_button.clicked.connect(self.go_back)
-
-        # Search bar
-        self.search_bar = QLineEdit()
-        self.search_bar.setPlaceholderText("Search...")
-
-        # This does it when text is changed
-        #self.search_bar.textChanged.connect(self.filter_files)
-
-        # Connect the returnPressed signal to the filter_files method
-        self.search_bar.returnPressed.connect(self.filter_files)
 
         # Show Hidden Items button
         self.show_hidden_button = QPushButton("Show Hidden Items")
@@ -157,25 +143,40 @@ class FileExplorer(QMainWindow):
         # Add buttons and search bar to layout
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.back_button)
-        button_layout.addWidget(self.search_bar)
         button_layout.addWidget(self.show_hidden_button)
 
         # Create Organize button
         self.organize_button = QPushButton("Organize Current Folder")
         self.organize_button.clicked.connect(self.organize_folder)
-
-        # Add the organize button to the button layout
         button_layout.addWidget(self.organize_button)
 
-        self.organize_button = QPushButton("Organize Current Folder")
-        self.organize_button.clicked.connect(self.organize_folder)
+        # Create a QLineEdit for displaying and editing the file path
+        self.path_line_edit = QLineEdit()
+        self.path_line_edit.setText(os.path.expanduser("~"))
+        self.path_line_edit.returnPressed.connect(self.update_directory)
 
+        # Create the search bar
+        self.search_bar = QLineEdit()
+        self.search_bar.setPlaceholderText("Search...")
+        self.search_bar.returnPressed.connect(self.filter_files)
+
+        # Add the button layout, search bar, and path line edit to the main layout
+        layout.addLayout(button_layout)
+        layout.addWidget(self.search_bar)
+        layout.addWidget(self.path_line_edit)
+
+        # Add the splitter below the buttons and search bar
+        layout.addWidget(self.splitter)
         # List View for files
         self.list_view = QListView()
         self.list_view.setMinimumWidth(int(windowMinimumWidth / 7) * 5)
         self.list_view.setModel(self.model)
         self.list_view.setRootIndex(self.model.index(os.path.expanduser("~")))  # Start in home directory
         self.list_view.setFont(QtGui.QFont('SansSerif', 14))
+
+        # List View for files
+        self.list_view_widget = QWidget()
+        list_layout = QVBoxLayout(self.list_view_widget)
 
         # Set view mode to grid
         self.list_view.setViewMode(QListView.IconMode)
@@ -186,7 +187,6 @@ class FileExplorer(QMainWindow):
         self.list_view.setItemDelegate(CustomDelegate(QSize(64, 64)))
 
         # Add the button layout and the list view to the main layout
-        list_layout.addLayout(button_layout)
         list_layout.addWidget(self.list_view)
 
         # Add the list view widget to the splitter
@@ -214,8 +214,6 @@ class FileExplorer(QMainWindow):
         # Set the list view model to the file system model initially
         self.list_view.setModel(self.model)
 
-        # Connect search bar's returnPressed signal to filter_files
-        self.search_bar.returnPressed.connect(self.filter_files)
 
         # Enable the context menu on the list view
         self.list_view.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -296,6 +294,7 @@ class FileExplorer(QMainWindow):
         self.rename_edit.returnPressed.connect(lambda: self.commit_rename(file_path, index))
         self.rename_edit.editingFinished.connect(self.rename_edit.hide)
 
+
     def commit_rename(self, old_path, index):
         new_name = self.rename_edit.text()
         new_path = os.path.join(os.path.dirname(old_path), new_name)
@@ -331,16 +330,28 @@ class FileExplorer(QMainWindow):
         if current_index.isValid():
             self.model.append_row(current_index, "New Directory", is_directory=True)
 
+    def update_directory(self):
+        new_path = self.path_line_edit.text()
+        if os.path.isdir(new_path):
+            self.list_view.setRootIndex(self.model.index(new_path))
+            self.path_line_edit.setText(new_path)
+            self.dir_stack.append(new_path)
+            self.back_button.setEnabled(True)
+        else:
+            print("Invalid directory path.")
+
     def on_tree_view_clicked(self, index):
         path = self.model.filePath(index)
         self.list_view.setRootIndex(self.model.index(path))
+        self.path_line_edit.setText(path)
         if self.model.isDir(index):
-            self.dir_stack.append(path)  # Save the current path to the stack
-            self.back_button.setEnabled(True)  # Enable back button
+            self.dir_stack.append(path)
+            self.back_button.setEnabled(True)
 
     def on_list_view_clicked(self, index):
         if index.isValid():
-            self.reset_first_click()
+            path = self.model.filePath(index)
+            self.path_line_edit.setText(path)
 
     def reset_first_click(self):
         self.first_click_index = None
@@ -354,22 +365,19 @@ class FileExplorer(QMainWindow):
 
     def go_back(self):
         if len(self.dir_stack) > 1:
-            self.dir_stack.pop()  # Remove the current directory
-            previous_path = self.dir_stack[-1]  # Get the previous directory
+            self.dir_stack.pop()
+            previous_path = self.dir_stack[-1]
             self.list_view.setRootIndex(self.model.index(previous_path))
             if len(self.dir_stack) == 1:
-                self.back_button.setEnabled(False)  # Disable back button if at home directory
+                self.back_button.setEnabled(False)
         else:
-            # If at home directory, disable back button
             self.back_button.setEnabled(False)
 
     def filter_files(self):
         search_text = self.search_bar.text().lower()
 
-        # Clear the search results model
         self.search_results_model.clear()
 
-        # If the search bar is empty, reset to the original model
         if not search_text:
             self.list_view.setModel(self.model)
             self.list_view.setRootIndex(self.model.index(os.path.expanduser("~")))
@@ -377,8 +385,8 @@ class FileExplorer(QMainWindow):
 
         # Perform the search and populate the search results model
         for file_path in search_files(search_text):
-            item = QStandardItem(os.path.basename(file_path))  # Get the file name
-            item.setData(file_path)  # Store the full path in the item's data
+            item = QStandardItem(os.path.basename(file_path))
+            item.setData(file_path)
             self.search_results_model.appendRow(item)
 
         # Set the list view to display the search results
