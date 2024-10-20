@@ -28,6 +28,21 @@ def categorize_file(file_name):
         if file_name.endswith(files_extentions[index]).equals(files_extentions[0] or files_extentions[1] or files_extentions[2]):
             return "Documents"
         
+        elif file_name.endswith(files_extentions[index]).equals(files_extentions[3] or files_extentions[4] or files_extentions[5]):
+            return "Media_Audio"
+
+        elif file_name.endswith(files_extentions[index]).equals(files_extentions[6] or files_extentions[7] or files_extentions[8]):
+            return "Media_Video"
+
+        elif file_name.endswith(files_extentions[index]).equals(files_extentions[9] or files_extentions[10] or files_extentions[11] or files_extentions[12]):
+            return "Images"
+        
+        elif file_name.endswith(files_extentions[index]).equals(files_extentions[13] or files_extentions[14] or files_extentions[15]):
+            return "Text"
+
+        else:
+            return "Others"
+        
         
     
     

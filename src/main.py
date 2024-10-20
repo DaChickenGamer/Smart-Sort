@@ -17,7 +17,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setOrganizationName("Smart Sort")
     app.setApplicationName("Smart Sort")
-    app.setWindowIcon(QIcon(sys.path[0] + "/assets/SmartSortIcon.png"))
+    app.setWindowIcon(QIcon(os.path.join(os.path.dirname(sys.path[0]), "assets", "SmartSortIcon.png")))
+    #print(os.path.join(os.path.dirname(sys.path[0]), "assets", "SmartSortIcon.png"))
     app.setApplicationVersion(qVersion())
 
     fileExplorer = FileExplorer()
@@ -30,7 +31,7 @@ if __name__ == "__main__":
 
     username = os.getlogin()
 
-    sys.exit(app.exec())
+    
 
     os_type = detect_os()
     print(f"Operating System Detected: {os_type}")
@@ -40,7 +41,7 @@ if __name__ == "__main__":
 
     print(f"Monitoring folder: {folder_to_monitor}")
     start_monitoring(folder_to_monitor)
-
+    sys.exit(app.exec())
 # from backend.os_detection import detect_os
 # from backend.file_monitor import start_monitoring
 
