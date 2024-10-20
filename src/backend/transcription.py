@@ -1,5 +1,7 @@
 import speech_recognition as sr
 from pydub import AudioSegment
+import os
+import sys
 
 from file_categorizer import categorize_file
 from src.io.extract_data import addToFileInfo
@@ -22,5 +24,7 @@ def transcribeAudio(file):
         except sr.RequestError as e:
             return f"There was an error {e}"
 
-transcription = transcribeAudio("C:\\Users\\vishw\\Documents\\harvard.wav")
+#print("File Path: " + os.path.join(os.path.dirname(sys.path[0]), "backend", "temp.wav"))
+transcription = transcribeAudio(os.path.join(os.path.dirname(sys.path[0]), "backend", "temp.wav"))
+#transcription = transcribeAudio("C:\\Users\\vishw\\Documents\\harvard.wav")
 addToFileInfo("transcription", transcription)

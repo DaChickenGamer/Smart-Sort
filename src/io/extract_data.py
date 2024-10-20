@@ -54,6 +54,7 @@ def extractData(filePath):
     return fileInfo
 
 def addToFileInfo(key, value):
+    #print("Key: " + key + " Value: " + value)
     fileInfo[key] = value
 
 print(extractData("test.txt"))
