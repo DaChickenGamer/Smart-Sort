@@ -3,10 +3,14 @@ import os
 from PySide6 import QtGui, QtWidgets
 from PySide6.QtCore import QSize, Qt, QDir
 import qtawesome as qta
+from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QTreeView, QListView,
     QFileSystemModel, QHBoxLayout, QSplitter, QPushButton, QStyledItemDelegate, QLineEdit
 )
+
+from src.backend.file_search import search_files
+
 
 class CustomFileSystemModel(QFileSystemModel):
     def data(self, index, role=Qt.DisplayRole):
@@ -19,12 +23,34 @@ class CustomFileSystemModel(QFileSystemModel):
                 if file_path.endswith(('.pdf', '.docx', '.txt')):
                     return self.color_icon(qta.icon('fa.file'), 'green')
                 elif file_path.endswith(('.jpg', '.png', '.gif')):
-                    return self.color_icon(qta.icon('fa.file-image'), 'orange')
+                    return self.color_icon(qta.icon('fa.image'), 'orange')
                 elif file_path.endswith(('.mp4', '.mkv')):
                     return self.color_icon(qta.icon('fa.file-video'), 'red')
                 else:
                     return self.color_icon(qta.icon('fa.file'), 'gray')
         return super().data(index, role)
+
+    def append_row(self, parent_index, name, is_directory=False):
+        parent_path = self.filePath(parent_index)
+        if is_directory:
+            new_path = os.path.join(parent_path, name)
+            try:
+                os.makedirs(new_path)
+                self.refresh(parent_index)
+            except FileExistsError:
+                print("Directory already exists")
+        else:
+            new_path = os.path.join(parent_path, name)
+            try:
+                with open(new_path, 'w') as f:
+                    f.write("")
+                self.refresh(parent_index)
+            except FileExistsError:
+                print("File already exists")
+
+    def refresh(self, index):
+        """Refresh the model to reflect the changes."""
+        self.setRootPath(self.rootPath())  # Reset the root path
 
     def color_icon(self, icon, color):
         pixmap = icon.pixmap(64, 64)  # Increase size to 64x64
@@ -66,6 +92,8 @@ class FileExplorer(QMainWindow):
         self.model = CustomFileSystemModel()
         self.model.setRootPath(os.path.expanduser("~"))  # Start from the home directory
 
+        self.search_results_model = QStandardItemModel(self)  # Create a model for search results
+
         # Initialize the directory stack
         self.dir_stack = [os.path.expanduser("~")]  # Start with home directory
 
@@ -97,7 +125,12 @@ class FileExplorer(QMainWindow):
         # Search bar
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search...")
-        self.search_bar.textChanged.connect(self.filter_files)
+
+        # This does it when text is changed
+        #self.search_bar.textChanged.connect(self.filter_files)
+
+        # Connect the returnPressed signal to the filter_files method
+        self.search_bar.returnPressed.connect(self.filter_files)
 
         # Show Hidden Items button
         self.show_hidden_button = QPushButton("Show Hidden Items")
@@ -141,6 +174,32 @@ class FileExplorer(QMainWindow):
         self.tree_view.clicked.connect(self.on_tree_view_clicked)
         self.list_view.clicked.connect(self.on_list_view_clicked)
 
+        # Add this in the __init__ method of FileExplorer
+        self.create_file_button = QPushButton("Create File")
+        self.create_dir_button = QPushButton("Create Directory")
+        self.create_file_button.clicked.connect(self.create_file)
+        self.create_dir_button.clicked.connect(self.create_directory)
+
+        # Add buttons to the button layout
+        button_layout.addWidget(self.create_file_button)
+        button_layout.addWidget(self.create_dir_button)
+
+        # Set the list view model to the file system model initially
+        self.list_view.setModel(self.model)
+
+        # Connect search bar's returnPressed signal to filter_files
+        self.search_bar.returnPressed.connect(self.filter_files)
+
+    def create_file(self):
+        current_index = self.list_view.rootIndex()
+        if current_index.isValid():
+            self.model.append_row(current_index, "new_file.txt", is_directory=False)
+
+    def create_directory(self):
+        current_index = self.list_view.rootIndex()
+        if current_index.isValid():
+            self.model.append_row(current_index, "New Directory", is_directory=True)
+
     def on_tree_view_clicked(self, index):
         path = self.model.filePath(index)
         self.list_view.setRootIndex(self.model.index(path))
@@ -149,14 +208,19 @@ class FileExplorer(QMainWindow):
             self.back_button.setEnabled(True)  # Enable back button
 
     def on_list_view_clicked(self, index):
-        path = self.model.filePath(index)
-        if self.model.isDir(index):
-            self.list_view.setRootIndex(self.model.index(path))
-            self.dir_stack.append(path)  # Save the current path to the stack
-            self.back_button.setEnabled(True)  # Enable back button
-        else:
-            # Optional: Handle file opening or displaying file info
+        if self.list_view.model() == self.search_results_model:
+            # If the search results model is active
+            path = index.data()  # Get the full path from the item's data
             print(f"File selected: {path}")
+        else:
+            # Handle the original model as before
+            path = self.model.filePath(index)
+            if self.model.isDir(index):
+                self.list_view.setRootIndex(self.model.index(path))
+                self.dir_stack.append(path)
+                self.back_button.setEnabled(True)
+            else:
+                print(f"File selected: {path}")
 
     def go_back(self):
         if len(self.dir_stack) > 1:
@@ -170,13 +234,29 @@ class FileExplorer(QMainWindow):
             self.back_button.setEnabled(False)
 
     def filter_files(self):
-        search_text = self.search_bar.text()
-        # Implement filtering logic based on the search_text
-        # This could involve filtering the model's data or adjusting the list view items.
+        search_text = self.search_bar.text().lower()
+
+        # Clear the search results model
+        self.search_results_model.clear()
+
+        # If the search bar is empty, reset to the original model
+        if not search_text:
+            self.list_view.setModel(self.model)
+            self.list_view.setRootIndex(self.model.index(os.path.expanduser("~")))
+            return
+
+        # Perform the search and populate the search results model
+        for file_path in search_files(search_text):
+            item = QStandardItem(os.path.basename(file_path))  # Get the file name
+            item.setData(file_path)  # Store the full path in the item's data
+            self.search_results_model.appendRow(item)
+
+        # Set the list view to display the search results
+        self.list_view.setModel(self.search_results_model)
 
     def toggle_hidden_items(self, checked):
-        if checked:
-            self.model.setFilter(QDir.AllEntries | QDir.NoDotAndDotDot | QDir.Hidden)  # Show hidden
-        else:
-            self.model.setFilter(QDir.AllEntries | QDir.NoDotAndDotDot)  # Hide hidden
-        self.list_view.setRootIndex(self.model.index(self.model.rootPath()))  # Refresh the view
+            if checked:
+                self.model.setFilter(QDir.AllEntries | QDir.NoDotAndDotDot | QDir.Hidden)  # Show hidden
+            else:
+                self.model.setFilter(QDir.AllEntries | QDir.NoDotAndDotDot)  # Hide hidden
+            self.list_view.setRootIndex(self.model.index(self.model.rootPath()))  # Refresh the view

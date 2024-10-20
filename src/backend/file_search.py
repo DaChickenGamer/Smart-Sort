@@ -1,12 +1,7 @@
 import os
 
-def searchFiles(directory, keyword):
-    filePaths = []
-    for root, dirs, files in os.walk(directory):
+def search_files(keyword):
+    for root, dirs, files in os.walk(os.path.expanduser("~")):
         for file in files:
             if keyword in file:
-                filePaths.append(os.path.join(root, file))
-    
-    return filePaths
-
-print(searchFiles("C:\\", "te"))
+                yield os.path.join(root, file)

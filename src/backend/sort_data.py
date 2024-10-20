@@ -1,9 +1,7 @@
-import os;
+import os
 
-def sortData(directory):
+def sort_data(directory):
     files = os.listdir(directory)
     files.sort()
 
     return files
-
-print(sortData("C:\\"))
