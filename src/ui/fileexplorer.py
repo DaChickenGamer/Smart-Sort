@@ -1,5 +1,7 @@
 import sys
 import os
+from operator import contains
+
 from PySide6 import QtGui, QtWidgets
 from PySide6.QtCore import QSize, Qt, QDir, QTimer
 import qtawesome as qta
@@ -10,25 +12,39 @@ from PySide6.QtWidgets import (
 )
 
 from src.backend.file_search import search_files
-from src.io.manual_organization_script import Organize
+from src.io.manual_organization_script import Organize, get_category_colors
+from src.io.processed_data import lookup_files_by_file_path
 
 
 class CustomFileSystemModel(QFileSystemModel):
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DecorationRole:
             icon = super().data(index, role)
-            if self.isDir(index):
-                return self.color_icon(qta.icon('fa.folder'), 'blue')
+            path = self.filePath(index)
+            file_data = lookup_files_by_file_path(path)
+
+            if file_data:
+                file_color = file_data[0]["file_color"]
             else:
-                file_path = self.filePath(index)
-                if file_path.endswith(('.pdf', '.docx', '.txt')):
-                    return self.color_icon(qta.icon('fa.file'), 'green')
-                elif file_path.endswith(('.jpg', '.png', '.gif')):
-                    return self.color_icon(qta.icon('fa.image'), 'orange')
-                elif file_path.endswith(('.mp4', '.mkv')):
-                    return self.color_icon(qta.icon('fa.video-camera'), 'red')
-                else:
-                    return self.color_icon(qta.icon('fa.file'), 'gray')
+                file_color = None
+
+            if self.isDir(index):
+                folder_name = os.path.basename(path)
+                folder_type = 'document' if folder_name == 'Documents' else folder_name.lower()
+                file_color = get_category_colors().get(folder_type, 'blue')  # Default to blue if not found
+                return self.color_icon(qta.icon('fa.folder'), file_color)
+
+            # Handle file types as before...
+            file_extension = os.path.splitext(path)[1][1:]  # Get the extension
+            if file_extension in ['jpg', 'jpeg', 'png', 'gif']:
+                return self.color_icon(qta.icon('fa.image'), file_color or 'orange')
+            elif file_extension in ['mp4', 'mkv']:
+                return self.color_icon(qta.icon('fa.video-camera'), file_color or 'red')
+            elif file_extension in ['pdf', 'docx', 'txt']:
+                return self.color_icon(qta.icon('fa.file'), file_color or 'green')
+            else:
+                return self.color_icon(qta.icon('fa.file'), file_color or 'gray')
+
         return super().data(index, role)
 
     def append_row(self, parent_index, name, is_directory=False):
@@ -207,10 +223,15 @@ class FileExplorer(QMainWindow):
 
         # Connect the double-click signal to open files or directories
         self.list_view.doubleClicked.connect(self.open_item)
+
     def organize_folder(self):
         current_index = self.list_view.rootIndex()
         if current_index.isValid():
             folder_path = self.model.filePath(current_index)
+            print(f"Organizing folder: {folder_path}")  # Debugging statement
+            if not os.path.exists(folder_path):
+                print(f"Error: The folder does not exist: {folder_path}")  # Debugging statement
+                return
             try:
                 Organize(folder_path)
                 self.model.refresh(current_index)  # Refresh the model to show updated organization
