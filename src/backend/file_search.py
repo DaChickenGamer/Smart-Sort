@@ -1,7 +1,4 @@
 import os
-import time;
-
-startTime = time.time()
 
 def searchFiles(directory, keyword):
     filePaths = []
@@ -13,8 +10,3 @@ def searchFiles(directory, keyword):
     return filePaths
 
 print(searchFiles("C:\\", "te"))
-
-endTime = time.time()
-runtime = endTime-startTime
-
-print(f"{runtime:.2f}")

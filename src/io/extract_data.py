@@ -3,6 +3,8 @@ import stat
 import mimetypes
 from datetime import datetime
 
+fileInfo = {}
+
 def getMimeType(filePath):
     mimeType, _ = mimetypes.guess_type(filePath)
     return mimeType
@@ -50,5 +52,8 @@ def extractData(filePath):
         "Permissions": permissions
     }
     return fileInfo
+
+def addToFileInfo(key, value):
+    fileInfo[key] = value
 
 print(extractData("test.txt"))
