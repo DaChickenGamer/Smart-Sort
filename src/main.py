@@ -1,28 +1,31 @@
 import sys
 import os
-import time
 
-from PySide6.QtCore import qVersion, QCommandLineParser
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtCore import qVersion, Qt
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
+
 from ui.fileexplorer import FileExplorer
-
-# Add the 'src' directory (parent of this file) to the Python path
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from backend.os_detection import detect_os
 from backend.file_monitor import start_monitoring
 
-import sys
-from PySide6 import QtWidgets, QtGui
+# Add the 'src' directory (parent of this file) to the Python path
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     app.setOrganizationName("Smart Sort")
     app.setApplicationName("Smart Sort")
-    app.setWindowIcon(QtGui.QIcon(sys.path[0] + "/assets/SmartSortIcon.png"))
+    app.setWindowIcon(QIcon(sys.path[0] + "/assets/SmartSortIcon.png"))
     app.setApplicationVersion(qVersion())
 
     fileExplorer = FileExplorer()
+
+    # For starting maximized
+    fileExplorer.showMaximized()
+    fileExplorer.setWindowState(Qt.WindowState.WindowMaximized)
+
     fileExplorer.show()
 
     username = os.getlogin()
