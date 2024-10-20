@@ -308,19 +308,10 @@ class FileExplorer(QMainWindow):
 
     def on_list_view_clicked(self, index):
         if index.isValid():
-            path = self.model.filePath(index)
-            if self.model.isDir(index):
-                # If it's a directory, change the view to that directory
-                self.list_view.setRootIndex(self.model.index(path))
-                self.dir_stack.append(path)
-                self.back_button.setEnabled(True)
-            else:
-                # If it's a file and already selected, open it
-                if self.list_view.currentIndex() == index:
-                    self.open_file(path)
-                else:
-                    # Update current index without opening
-                    self.list_view.setCurrentIndex(index)
+            self.reset_first_click()
+
+    def reset_first_click(self):
+        self.first_click_index = None
 
     def open_file(self, path):
         import subprocess
