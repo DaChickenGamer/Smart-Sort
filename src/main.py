@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     username = os.getlogin()
 
-    sys.exit(app.exec())
+    
 
     os_type = detect_os()
     print(f"Operating System Detected: {os_type}")
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     print(f"Monitoring folder: {folder_to_monitor}")
     start_monitoring(folder_to_monitor)
-
+    sys.exit(app.exec())
 # from backend.os_detection import detect_os
 # from backend.file_monitor import start_monitoring
 
