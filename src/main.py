@@ -17,7 +17,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setOrganizationName("Smart Sort")
     app.setApplicationName("Smart Sort")
-    app.setWindowIcon(QIcon(sys.path[0] + "/assets/SmartSortIcon.png"))
+    app.setWindowIcon(QIcon(os.path.join(os.path.dirname(sys.path[0]), "assets", "SmartSortIcon.png")))
+    #print(os.path.join(os.path.dirname(sys.path[0]), "assets", "SmartSortIcon.png"))
     app.setApplicationVersion(qVersion())
 
     fileExplorer = FileExplorer()
