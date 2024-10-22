@@ -1,6 +1,5 @@
 import sys
 import os
-from operator import contains
 
 from PySide6 import QtGui, QtWidgets
 from PySide6.QtCore import QSize, Qt, QDir, QTimer

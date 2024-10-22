@@ -3,7 +3,6 @@ from pydub import AudioSegment
 import os
 import sys
 
-from file_categorizer import categorize_file
 from src.io.extract_data import addToFileInfo
 
 def transcribeAudio(file):

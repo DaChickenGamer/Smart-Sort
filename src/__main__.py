@@ -5,9 +5,9 @@ from PySide6.QtCore import qVersion, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QIcon
 
-from ui.fileexplorer import FileExplorer
+from src.ui.fileexplorer import FileExplorer
 
-from backend.os_detection import detect_os
+from src.backend.os_detection import detect_os
 
 # Add the 'src' directory (parent of this file) to the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
